@@ -1,5 +1,5 @@
 (ns pharma.governor-contract-test
-  (:require [clojure.test :refer [deftest is]]
+  (:require [kotoba.test :refer [deftest is]]
             [pharma.store :as store]
             [pharma.advisor :as advisor]
             [pharma.governor :as governor]))
