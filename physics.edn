@@ -1,0 +1,45 @@
+;; What this vertical's robot physically does, declared for
+;; kotoba.robotics.process (kotoba-lang/robotics). `kbb -M:dev:physics` runs it.
+;;
+;; README: physical-domain work in pharmaceutical manufacturing (ISIC 2100) --
+;; dispensing, granulation, filling, packaging, cold-chain -- is executed by
+;; robots under kotoba-lang/robotics safety classes, gated by the Pharma
+;; Manufacturing Governor; batch release stays human. Cases here: how long a
+;; passive cold-chain shipper keeps a refrigerated product in range,
+;; whether the purified-water distribution loop keeps its flow velocity,
+;; and the dispensing arm's shoulder load when it moves raw-material
+;; containers.
+;;
+;; Every number without a cited source is marked `estimate` in its :basis.
+;; Replacing an estimate with a sourced value is this bot's growth work.
+{:physics/schema "itonami.physical-ai.spec.v1"
+ :repo "cloud-itonami/cloud-itonami-isic-2100"
+ :cases
+ [{:id :cold-chain-shipper
+   :kind :thermal
+   :procedure "passive shipper at 30 C ambient: a 100 mm-thick load of liquid product (half thickness 50 mm, centre adiabatic) packed at 4 C warms through the insulation (lumped into the outer heat-transfer coefficient) until it reaches 8 C"
+   :params {:thickness-m 0.05 :conductivity-w-mk 0.6 :density-kg-m3 1000.0 :specific-heat-j-kgk 4180.0
+            :t0-c 4.0 :t-hot-c 30.0 :h-back-w-m2k 0.0
+            :threshold-c 8.0 :duration-s 864000.0 :nodes 11}
+   :sweep {:param :h-front-w-m2k :values [0.15 0.3 0.5 0.8 1.2 2.0]}
+   :quantity :time-to-threshold-s
+   :limit {:min 172800.0 :basis "estimate: the shipper must hold the load inside the 2-8 C refrigerated range for a 48 h transit"}
+   :boundary {:lo 0.1 :hi 5.0}}
+  {:id :purified-water-loop
+   :kind :pipe-flow
+   :procedure "purified-water distribution loop (DN40, 80 m, hot at 80 C): return-leg flow velocity at the pump's delivered rate"
+   :params {:diameter-m 0.04 :length-m 80.0 :roughness-m 5.0e-7 :density-kg-m3 972.0
+            :viscosity-pa-s 3.5e-4 :pump-efficiency 0.6 :elevation-m 0.0}
+   :sweep {:param :q-m3s :values [0.0006 0.0010 0.0013 0.0020 0.0030]}
+   :quantity :velocity-mps
+   :limit {:min 1.0 :basis "estimate: 1 m/s taken as the minimum loop velocity to keep turbulent, biofilm-discouraging flow"}
+   :boundary {:lo 0.0002 :hi 0.005}}
+  {:id :dispensing-container-move
+   :kind :manipulator
+   :procedure "dispensing arm moves a raw-material container from the pallet onto the weighing booth's scale"
+   :params {:l1-m 0.45 :l2-m 0.40 :m1-kg 5.0 :m2-kg 3.5
+            :from [0.55 0.00] :to [0.30 0.45] :duration-s 3.0 :steps 500}
+   :sweep {:param :payload-kg :values [1.0 3.0 5.0 8.0 12.0]}
+   :quantity :peak-tau1-nm
+   :limit {:max 90.0 :basis "estimate: continuous shoulder torque of a ~10 kg-payload collaborative arm class"}
+   :boundary {:lo 0.5 :hi 40.0}}]}
